@@ -1,0 +1,89 @@
+print("Hey, is the script working?")
+wait("0.3")
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local UserInputService = game:GetService("UserInputService")
+
+local lp = Players.LocalPlayer
+local animationInfo = {}
+local AnimNames = {'Slash', 'Swing', 'Sword'}
+local toggleKey = Enum.KeyCode.V
+local isEnabled = true
+
+local function getInfo(id)
+    local success, info = pcall(function()
+        return MarketplaceService:GetProductInfo(id)
+    end)
+    if success then
+        return info
+    end
+    return {Name = ''}
+end
+
+local function block()
+    keypress(0x46)
+    wait()
+    keyrelease(0x46)
+end
+
+local function toggleScript()
+    isEnabled = not isEnabled
+    print("Script is now:", isEnabled and "Enabled" or "Disabled")
+end
+
+local function playerAdded(player)
+    local function charadded(character)
+        local humanoid = character:WaitForChild("Humanoid", 5)
+        if humanoid then
+            humanoid.AnimationPlayed:Connect(function(track)
+                if isEnabled then
+                    local info = animationInfo[track.Animation.AnimationId]
+                    if not info then
+                        info = getInfo(tonumber(track.Animation.AnimationId:match("%d+")))
+                        animationInfo[track.Animation.AnimationId] = info
+                    end
+                    local lpCharacter = lp.Character
+                    if lpCharacter and lpCharacter:FindFirstChild("Head") then
+                        local vCharacter = player.Character
+                        if vCharacter and vCharacter:FindFirstChild("Head") then
+                            local mag = (vCharacter.Head.Position - lpCharacter.Head.Position).Magnitude
+                            if mag < 15 then
+                                for _, animName in pairs(AnimNames) do
+                                    if info.Name:match(animName) then
+                                        pcall(block)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+
+    if player.Character then
+        charadded(player.Character)
+    end
+    player.CharacterAdded:Connect(charadded)
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= lp then
+        playerAdded(player)
+    end
+end
+
+print("Script enabled")
+
+-- Toggle script when the V key is pressed
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == toggleKey and input.UserInputType == Enum.UserInputType.Keyboard then
+        toggleScript()
+    end
+end)
+
+-- Handle new players
+Players.PlayerAdded:Connect(playerAdded)
+
+print("HOORAY, its working :D")
+print("Toggle Keybind - V")
